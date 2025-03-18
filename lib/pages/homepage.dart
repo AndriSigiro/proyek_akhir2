@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../models/product_model.dart';
+import '../services/api_service.dart';
+import 'product_detail_page.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -7,6 +10,13 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
+  late Future<List<Product>> futureProducts;
+
+  @override
+  void initState() {
+    super.initState();
+    futureProducts = ApiService.fetchProducts();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +44,20 @@ class _HomePageState extends State<HomePage> {
 
               // Bagian Produk Desa
               sectionTitle("🛒 Produk Desa"),
-              produkDesa(),
+              FutureBuilder<List<Product>>(
+                future: futureProducts,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return Center(child: Text('Tidak ada produk ditemukan'));
+                  } else {
+                    return produkDesa(snapshot.data!);
+                  }
+                },
+              ),
             ],
           ),
         ),
@@ -139,18 +162,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Widget produk desa
-  Widget produkDesa() {
+  Widget produkDesa(List<Product> products) {
     return Column(
-      children: [
-        produkItem("assets/madu.jpg", "Madu Asli", "Harga: Rp 50.000", "Desa Asri"),
-        produkItem("assets/kopi.jpg", "Kopi Desa", "Harga: Rp 30.000", "Desa Kopi"),
-        produkItem("assets/kerajinan.jpg", "Kerajinan Kayu", "Harga: Rp 75.000", "Desa Kreatif"),
-      ],
+      children: products.map((product) => produkItem(product)).toList(),
     );
   }
 
   // Widget item produk dengan navigasi ke detail produk
-  Widget produkItem(String imagePath, String title, String price, String desa) {
+  Widget produkItem(Product product) {
     return InkWell(
       onTap: () {
         // Navigasi ke halaman detail produk
@@ -158,10 +177,10 @@ class _HomePageState extends State<HomePage> {
           context,
           MaterialPageRoute(
             builder: (context) => ProductDetailPage(
-              imagePath: imagePath,
-              title: title,
-              price: price,
-              desa: desa,
+              imagePath: product.photoUrl,
+              title: product.productName,
+              price: "Harga: Rp ${product.price}",
+              location: product.location,
             ),
           ),
         );
@@ -179,119 +198,33 @@ class _HomePageState extends State<HomePage> {
               // Gambar produk
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.asset(
-                  imagePath,
+                child: Image.network(
+                  product.photoUrl,
                   width: 100,
                   height: 100,
                   fit: BoxFit.cover,
                 ),
               ),
               SizedBox(width: 10),
-              // Keterangan produk dan nama desa
+              // Keterangan produk dan lokasi
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
+                    Text(product.productName,
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
                     SizedBox(height: 4),
-                    Text(price,
+                    Text("Harga: Rp ${product.price}",
                         style: TextStyle(
                             color: Colors.green[700],
-                            fontWeight: FontWeight.bold)),
+                            fontWeight: FontWeight.bold)),      
                     SizedBox(height: 4),
-                    Text("$desa",
+                    Text("Lokasi: ${product.location}",
                         style: TextStyle(color: Colors.grey[600])),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Halaman detail produk
-class ProductDetailPage extends StatelessWidget {
-  final String imagePath;
-  final String title;
-  final String price;
-  final String desa;
-
-  const ProductDetailPage({
-    Key? key,
-    required this.imagePath,
-    required this.title,
-    required this.price,
-    required this.desa,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[200],
-      appBar: AppBar(
-        title: Text(title),
-        backgroundColor: Colors.blue[800],
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Tampilan foto produk
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.asset(
-                  imagePath,
-                  width: double.infinity,
-                  height: 200,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              SizedBox(height: 16),
-              // Tampilan detail produk
-              Text(
-                title,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Text(
-                price,
-                style: TextStyle(
-                    fontSize: 20,
-                    color: Colors.green[700],
-                    fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Text(
-                "Dari Desa: $desa",
-                style: TextStyle(fontSize: 18, color: Colors.grey[800]),
-              ),
-              SizedBox(height: 24),
-              // Tombol Checkout
-              Container(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Aksi checkout (sesuaikan kebutuhan)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Checkout: $title")),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    textStyle:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  child: Text("Checkout"),
-                ),
-              )
             ],
           ),
         ),

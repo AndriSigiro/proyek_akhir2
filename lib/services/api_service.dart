@@ -1,18 +1,21 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/berita.dart';
+import '../models/product_model.dart';
 
 class ApiService {
-  final String baseUrl = "http://127.0.0.1:8000/api";
-
-  Future<List<Berita>> fetchBerita() async {
-    final response = await http.get(Uri.parse('$baseUrl/berita'));
+  static Future<List<Product>> fetchProducts() async {
+    final response = await http.get(Uri.parse('https://c4b3-114-5-146-110.ngrok-free.app/api/products'));
 
     if (response.statusCode == 200) {
-      List jsonResponse = json.decode(response.body);
-      return jsonResponse.map((data) => Berita.fromJson(data)).toList();
+      // Decode JSON response
+      Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+      // Extract the 'data' array
+      List<dynamic> data = jsonResponse['data'];
+      // Convert each item in the array to a Product object
+      List<Product> products = data.map((item) => Product.fromJson(item)).toList();
+      return products;
     } else {
-      throw Exception('Gagal mengambil data berita');
+      throw Exception('Failed to load products');
     }
   }
 }
